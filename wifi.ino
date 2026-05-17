@@ -4,32 +4,55 @@ const char* ssid = "ESP8266_WIFI";
 const char* password = "12345678";
 WiFiServer server(80);
 
+unsigned long ultimoEnvioStatus = 0;
+bool ultimoEstadoLED = false;
+
 void setup() {
-  Serial.begin(9600);  // IMPORTANTE: mesma velocidade do Arduino Uno
+  Serial.begin(9600);
   Serial.setTimeout(10);
   
   WiFi.softAP(ssid, password);
   server.begin();
   
-  Serial.println("ESP8266 pronto");
+  // Aguarda Arduino Uno iniciar
+  delay(2000);
+  Serial.println("ESP8266 iniciado");
 }
 
 void loop() {
+  // Verifica estado atual do LED no Arduino Uno
+  if (millis() - ultimoEnvioStatus > 5000) {  // A cada 5 segundos
+    Serial.println("STATUS");
+    ultimoEnvioStatus = millis();
+  }
+  
+  // Lê resposta do Arduino Uno
+  while (Serial.available()) {
+    String resposta = Serial.readStringUntil('\n');
+    if (resposta.startsWith("STATUS:")) {
+      String estado = resposta.substring(7);
+      estado.trim();
+      // Opcional: Mostra no Serial Monitor
+      Serial.print("Estado do LED: ");
+      Serial.println(estado);
+    }
+  }
+  
   WiFiClient client = server.available();
   if (!client) return;
   
   String request = client.readStringUntil('\r');
   client.flush();
   
-  // Envia comandos para o Arduino Uno com quebra de linha
+  // Envia comandos para o Arduino Uno
   if (request.indexOf("/LED=ON") != -1) {
-    Serial.println("ON");  // println adiciona \n automaticamente
-    Serial.println("<ON>");  // Para debug
+    Serial.println("ON");
+    Serial.println("<ON>");
   }
   
   if (request.indexOf("/LED=OFF") != -1) {
-    Serial.println("OFF");  // println adiciona \n automaticamente
-    Serial.println("<OFF>");  // Para debug
+    Serial.println("OFF");
+    Serial.println("<OFF>");
   }
   
   // HTML
